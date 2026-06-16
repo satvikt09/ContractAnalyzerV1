@@ -1,0 +1,2 @@
+"""Cutout Django project package."""
+
