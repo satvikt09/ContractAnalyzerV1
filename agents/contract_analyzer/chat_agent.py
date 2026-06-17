@@ -119,6 +119,14 @@ class SessionState:
     ] = field(
         default_factory=list
     )
+
+    executive_summary: Dict[
+        str,
+        Any
+    ] = field(
+        default_factory=dict
+    )
+
     report_path: str = ""
 
 _SESSION_DATA: Dict[str, SessionState] = {}
@@ -395,6 +403,12 @@ def index_uploaded_files(
                     []
                 )
             )
+            state.executive_summary = (
+                result.get(
+                    "executive_summary",
+                    {}
+                )
+            )            
             state.report_path = (
                 result.get(
                     "report_path",
@@ -453,6 +467,9 @@ def index_uploaded_files(
 
         "mitigation_results":
             state.mitigation_analysis,
+
+        "executive_summary":
+            state.executive_summary,
 
         "report_path":
             state.report_path

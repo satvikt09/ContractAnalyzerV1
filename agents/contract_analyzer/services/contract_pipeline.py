@@ -25,9 +25,15 @@ from agents.contract_analyzer.services.risk_assessment.risk_agent import (
 from agents.contract_analyzer.services.mitigation_assessment.mitigation_agent import (
     generate_mitigation_table
 )
+from agents.contract_analyzer.services.executive_summary import (
+    generate_executive_summary
+)
 #export
 from agents.contract_analyzer.services.export.report_generator import (
     export_contract_report
+)
+from agents.contract_analyzer.services.config import (
+    SHOW_EXECUTIVE_SUMMARY
 )
 
 def process_contract(file_path):
@@ -242,11 +248,27 @@ def process_contract(file_path):
             risk_results
         )
     )
+    if SHOW_EXECUTIVE_SUMMARY:
+
+        executive_summary = (
+            generate_executive_summary(
+                compliance_results,
+                risk_results
+            )
+        )
+
+    else:
+
+        executive_summary = {}
+    print("\nEXECUTIVE SUMMARY")
+    print(executive_summary)
+
     report_path = (
         "contract_analysis_report.docx"
     )
 
     export_contract_report(
+        executive_summary,
         compliance_results,
         risk_results,
         mitigation_results,
@@ -288,6 +310,10 @@ def process_contract(file_path):
 
         "mitigation_results":
             mitigation_results,
+
+        "executive_summary":
+            executive_summary,
         "report_path":
             report_path,            
     }
+

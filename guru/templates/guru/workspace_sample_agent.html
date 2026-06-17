@@ -157,6 +157,56 @@
               </div>
             </template>
             <div class="chat-feed" id="chatFeed">
+            {% if executive_summary %}
+
+            <div class="card mb-4">
+
+                <div class="card-header">
+                    Executive Summary
+                </div>
+
+                <div class="card-body">
+
+                    <p>
+                        <strong>
+                            Overall Risk Rating:
+                        </strong>
+                        {{ executive_summary.overall_rating }}
+                    </p>
+
+                    <p>
+                        {{ executive_summary.executive_narrative }}
+                    </p>
+
+                    <h6>
+                        Key Findings
+                    </h6>
+
+                    <ul>
+
+                    {% for item in executive_summary.top_findings %}
+
+                        <li>
+                            {{ item }}
+                        </li>
+
+                    {% endfor %}
+
+                    </ul>
+
+                    <h6>
+                        Recommendation
+                    </h6>
+
+                    <p>
+                        {{ executive_summary.recommendation }}
+                    </p>
+
+                </div>
+
+            </div>
+
+            {% endif %}              
             {% if compliance_results %}
             <div class="chat-entry">
               <div class="chat-bubble assistant" style="max-width:100%;">

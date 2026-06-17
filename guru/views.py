@@ -8,7 +8,9 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_protect
 
 from agents.contract_analyzer import chat_agent as sample_agent
-
+from agents.contract_analyzer.services.config import (
+    SHOW_EXECUTIVE_SUMMARY
+)
 
 @csrf_protect
 def workspace_sample_agent(request):
@@ -49,7 +51,7 @@ def workspace_sample_agent(request):
 
         "risk_results": [],        
 
-        "summary": {},
+        "executive_summary": {},
 
         "analysis_status":
             "Analysis status will be shown here"
@@ -175,18 +177,23 @@ def workspace_sample_agent(request):
                         []
                     )
                 )
+                if SHOW_EXECUTIVE_SUMMARY:
+
+                    context["executive_summary"] = (
+                        result.get(
+                            "executive_summary",
+                            {}
+                        )
+                    )
+
+                else:
+
+                    context["executive_summary"] = {}                
                 context["report_path"] = (
                     result.get(
                         "report_path"
                     )
                 )
-                context["summary"] = (
-                    result.get(
-                        "summary",
-                        {}
-                    )
-                )
-
                 context["analysis_status"] = (
                     "Compliance analysis completed"
                 )
@@ -222,14 +229,14 @@ def workspace_sample_agent(request):
                             "risk_results"
                         ]
                     )
-)
-                print(
-                    "Summary:",
-                    context[
-                        "summary"
-                    ]
                 )
-
+                print(
+                    "Executive Summary:",
+                    context.get(
+                        "executive_summary",
+                        {}
+                    )
+                )
             except Exception as err:
 
                 context["error"] = str(
