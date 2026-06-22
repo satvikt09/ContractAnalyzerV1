@@ -158,54 +158,38 @@
             </template>
             <div class="chat-feed" id="chatFeed">
             {% if executive_summary %}
-
             <div class="card mb-4">
-
                 <div class="card-header">
                     Executive Summary
                 </div>
-
                 <div class="card-body">
-
                     <p>
                         <strong>
                             Overall Risk Rating:
                         </strong>
                         {{ executive_summary.overall_rating }}
                     </p>
-
                     <p>
                         {{ executive_summary.executive_narrative }}
                     </p>
-
                     <h6>
                         Key Findings
                     </h6>
-
                     <ul>
-
                     {% for item in executive_summary.top_findings %}
-
                         <li>
                             {{ item }}
                         </li>
-
                     {% endfor %}
-
                     </ul>
-
                     <h6>
                         Recommendation
                     </h6>
-
                     <p>
                         {{ executive_summary.recommendation }}
                     </p>
-
                 </div>
-
             </div>
-
             {% endif %}              
             {% if compliance_results %}
             <div class="chat-entry">
@@ -216,24 +200,29 @@
                 <table style="width:100%;border-collapse:collapse;margin-top:12px;">
                   <thead>
                   <tr>
-                      <th style="border:1px solid #ddd;padding:8px;">
-                          Clause
-                      </th>
-                      <th style="border:1px solid #ddd;padding:8px;">
-                          Requirement
-                      </th>
-                      <th style="border:1px solid #ddd;padding:8px;">
-                          Status
-                      </th>
-                      <th style="border:1px solid #ddd;padding:8px;">
-                          Evidence
-                      </th>
-                      <th style="border:1px solid #ddd;padding:8px;">
-                          Remarks
-                      </th>
-                      <th style="border:1px solid #ddd;padding:8px;">
-                          Confidence
-                      </th>
+                    <th style="border:1px solid #ddd;padding:8px;">
+                        Clause
+                    </th>
+                    <th style="border:1px solid #ddd;padding:8px;">
+                        Requirement
+                    </th>    
+                    {% if show_clause_summary_column %}
+                    <th>
+                        Summary of Key Details
+                    </th>
+                    {% endif %}
+                    {% if show_status_column %}
+                    <th>Status</th>
+                    {% endif %}
+                    <th style="border:1px solid #ddd;padding:8px;">
+                        Evidence
+                    </th>
+                    <th style="border:1px solid #ddd;padding:8px;">
+                        Remarks
+                    </th>
+                    <th style="border:1px solid #ddd;padding:8px;">
+                        Confidence
+                    </th>
                   </tr>
                   </thead>
 
@@ -246,6 +235,13 @@
                       <td style="border:1px solid #ddd;padding:8px;">
                           {{ clause.requirement }}
                       </td>
+                      {% if show_clause_summary_column %}
+                      <td>
+                          {{ clause.clause_summary }}
+                      </td>
+                      {% endif %}
+                      <td style="border:1px solid #ddd;padding:8px;">
+                      {% if show_status_column %}
                       <td style="border:1px solid #ddd;padding:8px;">
                       {% if clause.status == "Met" %}
                       <span style="color:#166534;font-weight:600;">
@@ -259,6 +255,8 @@
                       <span style="color:#b91c1c;font-weight:600;">
                           ✕ Not Met
                       </span>
+                      {% endif %}
+                      </td>
                       {% endif %}
                       </td>
                       <td style="border:1px solid #ddd;padding:8px;">

@@ -1,7 +1,9 @@
 from docx import Document
 
 from agents.contract_analyzer.services.config import (
-    SHOW_EXECUTIVE_SUMMARY
+    SHOW_EXECUTIVE_SUMMARY,
+    SHOW_CLAUSE_SUMMARY_COLUMN,
+    SHOW_STATUS_COLUMN
 )
 
 
@@ -84,52 +86,103 @@ def export_contract_report(
         level=2
     )
 
+    cols = 2
+
+    if SHOW_CLAUSE_SUMMARY_COLUMN:
+        cols += 1
+
+    if SHOW_STATUS_COLUMN:
+        cols += 1
+
+    cols += 1  # Evidence
+
     table = doc.add_table(
         rows=1,
-        cols=4
+        cols=cols
     )
 
     table.style = "Table Grid"
 
     hdr = table.rows[0].cells
 
-    hdr[0].text = "Clause"
-    hdr[1].text = "Requirement"
-    hdr[2].text = "Status"
-    hdr[3].text = "Evidence"
+    idx = 0
+
+    hdr[idx].text = "Clause"
+    idx += 1
+
+    hdr[idx].text = "Requirement"
+    idx += 1
+
+    if SHOW_CLAUSE_SUMMARY_COLUMN:
+
+        hdr[idx].text = (
+            "Summary of Key Details"
+        )
+
+        idx += 1
+
+    if SHOW_STATUS_COLUMN:
+
+        hdr[idx].text = (
+            "Status"
+        )
+
+        idx += 1
+
+    hdr[idx].text = (
+        "Evidence"
+    )
 
     for row in compliance_results:
 
         cells = table.add_row().cells
 
-        cells[0].text = str(
+        idx = 0
+
+        cells[idx].text = str(
             row.get(
                 "clause",
                 ""
             )
         )
+        idx += 1
 
-        cells[1].text = str(
+        cells[idx].text = str(
             row.get(
                 "requirement",
                 ""
             )
         )
+        idx += 1
 
-        cells[2].text = str(
-            row.get(
-                "status",
-                ""
+        if SHOW_CLAUSE_SUMMARY_COLUMN:
+
+            cells[idx].text = str(
+                row.get(
+                    "clause_summary",
+                    ""
+                )
             )
-        )
 
-        cells[3].text = str(
+            idx += 1
+
+        if SHOW_STATUS_COLUMN:
+
+            cells[idx].text = str(
+                row.get(
+                    "status",
+                    ""
+                )
+            )
+
+            idx += 1
+
+        cells[idx].text = str(
             row.get(
                 "evidence",
                 ""
             )
         )
-
     # ==================================
     # TABLE 2
     # ==================================

@@ -13,6 +13,12 @@ from agents.contract_analyzer.services.compliance_rule_engine import (
 from agents.contract_analyzer.services.risk_signals import (
     contains_risk_signal
 )
+from .clause_summary import (
+    generate_clause_summary
+)
+from .config import (
+    SHOW_CLAUSE_SUMMARY_COLUMN
+)
 
 def get_relevant_sentences(content, keywords):
 
@@ -865,6 +871,77 @@ def check_compliance(
         rule_results
         + llm_results
     )
+    
+    clause_map = {}
+    for clause in classified_clauses:
+        clause_type = clause.get(
+            "clause_type",
+            ""
+        )
+        if clause_type not in clause_map:
+            clause_map[clause_type] = []
+        clause_map[clause_type].append(
+            clause.get(
+                "content",
+                ""
+            )
+        )    
+    CLAUSE_TO_TYPE = {
+        "Payment Terms":
+            "payment",
+        "Bank Guarantees":
+            "bank_guarantees",
+        "Liquidated Damages":
+            "liquidated_damages",
+        "Guarantee":
+            "warranties",
+        "Force Majeure":
+            "force_majeure",
+        "Termination":
+            "termination",
+        "Suspension":
+            "suspension",
+        "Change Orders":
+            "change_orders",
+        "Governing Law":
+            "governing_law",
+        "Dispute Resolution":
+            "governing_law",
+        "Insurance":
+            "insurance",
+        "Liability":
+            "liability",
+        "Consequential Damages":
+            "consequential_damages",
+        "Critical Sub-Suppliers":
+            "force_majeure"
+    }     
+    if SHOW_CLAUSE_SUMMARY_COLUMN:
+        for result in final_results:
+            clause_type = (
+                CLAUSE_TO_TYPE.get(
+                    result["clause"],
+                    ""
+                )
+            )
+            clause_text = " ".join(
+                clause_map.get(
+                    clause_type,
+                    []
+                )
+            )
+            result["clause_summary"] = (
+                generate_clause_summary(
+                    clause_text
+                )
+            ) 
+            print(
+                result["clause"],
+                "summary length:",
+                len(
+                    result["clause_summary"]
+                )
+            )           
     # --------------------------------
     # RISK SIGNAL ENRICHMENT
     # --------------------------------
@@ -919,5 +996,8 @@ def check_compliance(
     print(f"Total Run   : {total_time} sec")
 
     print("=" * 60)
+
+    print("\nSAMPLE RESULT")
+    print(final_results[0])
 
     return final_results

@@ -9,7 +9,9 @@ from django.views.decorators.csrf import csrf_protect
 
 from agents.contract_analyzer import chat_agent as sample_agent
 from agents.contract_analyzer.services.config import (
-    SHOW_EXECUTIVE_SUMMARY
+    SHOW_EXECUTIVE_SUMMARY,
+    SHOW_CLAUSE_SUMMARY_COLUMN,
+    SHOW_STATUS_COLUMN
 )
 
 @csrf_protect
@@ -52,6 +54,12 @@ def workspace_sample_agent(request):
         "risk_results": [],        
 
         "executive_summary": {},
+
+        "show_status_column":
+            SHOW_STATUS_COLUMN,
+
+        "show_clause_summary_column":
+            SHOW_CLAUSE_SUMMARY_COLUMN,
 
         "analysis_status":
             "Analysis status will be shown here"
