@@ -57,6 +57,11 @@ BEDROCK_MODEL_ID = os.environ.get(
 DEFAULT_TEMPERATURE = 0.2
 DEFAULT_TOP_P = 0.9
 DEFAULT_MAX_TOKENS = 2048
+DEFAULT_SYSTEM_PROMPT = (
+    "You are a professional legal contract assistant. Use the provided context "
+    "from the uploaded contract agreements to answer the user's questions accurately. "
+    "Be concise, precise, and state if details are missing."
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 UPLOAD_ROOT = PROJECT_ROOT / "media" / "custom_dev_sample_agent"
@@ -128,6 +133,7 @@ class SessionState:
     )
 
     report_path: str = ""
+    progress_message: str = ""
 
 _SESSION_DATA: Dict[str, SessionState] = {}
 
@@ -372,8 +378,12 @@ def index_uploaded_files(
             print(f"File: {artifact.name}")
             print(f"Path: {artifact.path}")
 
+            def update_progress(msg):
+                state.progress_message = msg
+
             result = process_contract(
-                str(artifact.path)
+                str(artifact.path),
+                progress_callback=update_progress
             )
 
             state.extracted_text = (

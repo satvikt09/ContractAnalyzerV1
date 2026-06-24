@@ -36,7 +36,7 @@ from agents.contract_analyzer.services.config import (
     SHOW_EXECUTIVE_SUMMARY
 )
 
-def process_contract(file_path):
+def process_contract(file_path, progress_callback=None):
 
     print("\n" + "=" * 60)
     print("PROCESSING CONTRACT PIPELINE")
@@ -45,6 +45,9 @@ def process_contract(file_path):
     # --------------------------------
     # EXTRACTION
     # --------------------------------
+
+    if progress_callback:
+        progress_callback("Extracting text content from contract files...")
 
     extraction = get_extraction(
         file_path
@@ -59,6 +62,9 @@ def process_contract(file_path):
     # SEGMENTATION
     # --------------------------------
 
+    if progress_callback:
+        progress_callback("Analyzing document structure & segments...")
+
     sections = segment_contract(
         extraction["raw_text"]
     )
@@ -71,6 +77,9 @@ def process_contract(file_path):
     # --------------------------------
     # CLASSIFICATION
     # --------------------------------
+
+    if progress_callback:
+        progress_callback("Identifying and classifying legal clauses...")
 
     classified_results = []
 
@@ -187,6 +196,9 @@ def process_contract(file_path):
     # COMPLIANCE ANALYSIS
     # --------------------------------
 
+    if progress_callback:
+        progress_callback("Checking clause compliance with legal guidelines...")
+
     compliance_results = (
         check_compliance(
             classified_results
@@ -210,6 +222,9 @@ def process_contract(file_path):
     # AGENT 2
     # RISK ASSESSMENT
     # --------------------------------
+
+    if progress_callback:
+        progress_callback("Assessing potential liabilities and risks...")
 
     print("\n" + "=" * 60)
     print("STARTING RISK ASSESSMENT")
@@ -239,6 +254,9 @@ def process_contract(file_path):
     # MITIGATION ASSESSMENT
     # --------------------------------
 
+    if progress_callback:
+        progress_callback("Formulating mitigation strategies & recommendations...")
+
     print("\n" + "=" * 60)
     print("STARTING MITIGATION ASSESSMENT")
     print("=" * 60)
@@ -262,6 +280,13 @@ def process_contract(file_path):
         executive_summary = {}
     print("\nEXECUTIVE SUMMARY")
     print(executive_summary)
+
+    # --------------------------------
+    # REPORT EXPORT
+    # --------------------------------
+
+    if progress_callback:
+        progress_callback("Finalizing export documents and report...")
 
     report_path = (
         "contract_analysis_report.docx"

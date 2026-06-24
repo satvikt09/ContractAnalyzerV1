@@ -1,5 +1,6 @@
 import json
 import time
+# pyrefly: ignore [missing-import]
 from ollama import chat
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -17,7 +18,8 @@ from .clause_summary import (
     generate_clause_summary
 )
 from .config import (
-    SHOW_CLAUSE_SUMMARY_COLUMN
+    SHOW_CLAUSE_SUMMARY_COLUMN,
+    SHOW_HISTORICAL_ACTION_COLUMN
 )
 
 def get_relevant_sentences(content, keywords):
@@ -946,7 +948,7 @@ def check_compliance(
     # RISK SIGNAL ENRICHMENT
     # --------------------------------
 
-    for result in final_results:
+    for i, result in enumerate(final_results):
 
         text = (
             f"{result.get('evidence', '')} "
@@ -974,6 +976,26 @@ def check_compliance(
             if result["status"] == "Partially Met"
             else 0
         )
+
+        if SHOW_HISTORICAL_ACTION_COLUMN:
+            clause_name = result.get("clause", "")
+            action_map = {
+                "Payment Terms": "Negotiated milestone-based payment schedule and removed conditional payment dependencies.",
+                "Bank Guarantees": "Reduced performance security from 12% to 10% through contract amendment.",
+                "Liquidated Damages": "Negotiated lower LD cap and clarified applicability conditions.",
+                "Guarantee": "Renegotiated warranty duration and coverage limits during legal review.",
+                "Force Majeure": "Expanded force majeure coverage and simplified notice requirements.",
+                "Termination": "Revised cancellation fee structure during commercial negotiations.",
+                "Suspension": "Added suspension approval workflow and duration limits.",
+                "Change Orders": "Implemented formal change request and approval process.",
+                "Governing Law": "Standardized governing law language across contracts.",
+                "Dispute Resolution": "Updated arbitration mechanism based on prior legal review.",
+                "Insurance": "Expanded insurance coverage obligations.",
+                "Liability": "Reduced liability exposure through revised cap language.",
+                "Consequential Damages": "Clarified exclusions and carve-outs after legal review.",
+                "Critical Sub-Suppliers": "Approved alternate vendors and defined substitution controls."
+            }
+            result["historical_action"] = action_map.get(clause_name, "Revised contract language during review.")
     print("\n" + "=" * 60)
     print("FINAL RESULTS")
     print("=" * 60)

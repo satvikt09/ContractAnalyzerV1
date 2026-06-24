@@ -311,13 +311,64 @@ def login(request):
         request,
         "guru/login.html"
     )
-def download_report(request):
+import io
+import datetime
 
+def download_report(request):
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    try:
+        with open("contract_analysis_report.docx", "rb") as f:
+            data = f.read()
+        buffer = io.BytesIO(data)
+        return FileResponse(
+            buffer,
+            as_attachment=True,
+            filename=f"Contract_Analysis_Report_{timestamp}.docx",
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+from django.http import JsonResponse
+
+def download_table_docx(request):
+    session_key = request.GET.get("session_key")
+    if not session_key:
+        session_key = request.session.session_key
+        if not session_key:
+            request.session.create()
+            session_key = request.session.session_key
+    table_type = request.GET.get("type", "")
+    
+    from agents.contract_analyzer import chat_agent as sample_agent
+    state = sample_agent._ensure_session(session_key)
+    
+    from agents.contract_analyzer.services.export.report_generator import (
+        export_individual_compliance_report,
+        export_individual_risk_report,
+        export_individual_mitigation_report
+    )
+    
+    buffer = io.BytesIO()
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    if table_type == "compliance":
+        output_filename = f"Compliance_Evaluation_Report_{timestamp}.docx"
+        export_individual_compliance_report(state.compliance_results, buffer)
+    elif table_type == "risk":
+        output_filename = f"Risk_Assessment_Report_{timestamp}.docx"
+        export_individual_risk_report(state.risk_analysis, buffer)
+    elif table_type == "mitigation":
+        output_filename = f"Mitigation_Strategy_Guidelines_{timestamp}.docx"
+        export_individual_mitigation_report(state.mitigation_analysis, buffer)
+    else:
+        return JsonResponse({"error": "Invalid table type"}, status=400)
+        
+    buffer.seek(0)
     return FileResponse(
-        open(
-            "contract_analysis_report.docx",
-            "rb"
-        ),
+        buffer,
         as_attachment=True,
-        filename="Contract_Analysis_Report.docx"
+        filename=output_filename,
+        content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )

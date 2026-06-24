@@ -1,9 +1,11 @@
+# pyrefly: ignore [missing-import]
 from docx import Document
 
 from agents.contract_analyzer.services.config import (
     SHOW_EXECUTIVE_SUMMARY,
     SHOW_CLAUSE_SUMMARY_COLUMN,
-    SHOW_STATUS_COLUMN
+    SHOW_STATUS_COLUMN,
+    SHOW_HISTORICAL_ACTION_COLUMN
 )
 
 
@@ -96,6 +98,9 @@ def export_contract_report(
 
     cols += 1  # Evidence
 
+    if SHOW_HISTORICAL_ACTION_COLUMN:
+        cols += 1
+
     table = doc.add_table(
         rows=1,
         cols=cols
@@ -132,6 +137,11 @@ def export_contract_report(
     hdr[idx].text = (
         "Evidence"
     )
+    idx += 1
+
+    if SHOW_HISTORICAL_ACTION_COLUMN:
+        hdr[idx].text = "Historical Action Taken"
+        idx += 1
 
     for row in compliance_results:
 
@@ -167,7 +177,6 @@ def export_contract_report(
             idx += 1
 
         if SHOW_STATUS_COLUMN:
-
             cells[idx].text = str(
                 row.get(
                     "status",
@@ -183,6 +192,16 @@ def export_contract_report(
                 ""
             )
         )
+        idx += 1
+
+        if SHOW_HISTORICAL_ACTION_COLUMN:
+            cells[idx].text = str(
+                row.get(
+                    "historical_action",
+                    ""
+                )
+            )
+            idx += 1
     # ==================================
     # TABLE 2
     # ==================================
@@ -308,4 +327,114 @@ def export_contract_report(
     doc.save(
         output_path
     )
+    return output_path
+
+
+def export_individual_compliance_report(compliance_results, output_path):
+    doc = Document()
+    doc.add_heading("Compliance Evaluation Report", level=1)
+    
+    cols = 2
+    if SHOW_CLAUSE_SUMMARY_COLUMN:
+        cols += 1
+    if SHOW_STATUS_COLUMN:
+        cols += 1
+    cols += 2
+    if SHOW_HISTORICAL_ACTION_COLUMN:
+        cols += 1
+    
+    table = doc.add_table(rows=1, cols=cols)
+    table.style = "Table Grid"
+    hdr = table.rows[0].cells
+    idx = 0
+    hdr[idx].text = "Clause"
+    idx += 1
+    hdr[idx].text = "Requirement"
+    idx += 1
+    if SHOW_CLAUSE_SUMMARY_COLUMN:
+        hdr[idx].text = "Key Details Summary"
+        idx += 1
+    if SHOW_STATUS_COLUMN:
+        hdr[idx].text = "Compliance Status"
+        idx += 1
+    hdr[idx].text = "Evidence Reference"
+    idx += 1
+    hdr[idx].text = "Assessor Remarks"
+    idx += 1
+    if SHOW_HISTORICAL_ACTION_COLUMN:
+        hdr[idx].text = "Historical Action Taken"
+        idx += 1
+    
+    for row in compliance_results:
+        cells = table.add_row().cells
+        idx = 0
+        cells[idx].text = str(row.get("clause", ""))
+        idx += 1
+        cells[idx].text = str(row.get("requirement", ""))
+        idx += 1
+        if SHOW_CLAUSE_SUMMARY_COLUMN:
+            cells[idx].text = str(row.get("clause_summary", ""))
+            idx += 1
+        if SHOW_STATUS_COLUMN:
+            cells[idx].text = str(row.get("status", ""))
+            idx += 1
+        cells[idx].text = str(row.get("evidence", ""))
+        idx += 1
+        cells[idx].text = str(row.get("remarks", ""))
+        idx += 1
+        if SHOW_HISTORICAL_ACTION_COLUMN:
+            cells[idx].text = str(row.get("historical_action", ""))
+            idx += 1
+        
+    doc.save(output_path)
+    return output_path
+
+
+def export_individual_risk_report(risk_results, output_path):
+    doc = Document()
+    doc.add_heading("Risk Assessment Report", level=1)
+    
+    table = doc.add_table(rows=1, cols=7)
+    table.style = "Table Grid"
+    hdr = table.rows[0].cells
+    hdr[0].text = "Clause"
+    hdr[1].text = "Requirement"
+    hdr[2].text = "RAG Priority"
+    hdr[3].text = "Identified Risk"
+    hdr[4].text = "Technical Rationale"
+    hdr[5].text = "Suggested Mitigation"
+    hdr[6].text = "Evidence Context"
+    
+    for row in risk_results:
+        cells = table.add_row().cells
+        cells[0].text = str(row.get("clause", ""))
+        cells[1].text = str(row.get("requirement", ""))
+        cells[2].text = str(row.get("rag", ""))
+        cells[3].text = str(row.get("risk", ""))
+        cells[4].text = str(row.get("rationale", ""))
+        cells[5].text = str(row.get("mitigation", ""))
+        cells[6].text = str(row.get("evidence", ""))
+        
+    doc.save(output_path)
+    return output_path
+
+
+def export_individual_mitigation_report(mitigation_results, output_path):
+    doc = Document()
+    doc.add_heading("Mitigation Strategy Guidelines", level=1)
+    
+    table = doc.add_table(rows=1, cols=3)
+    table.style = "Table Grid"
+    hdr = table.rows[0].cells
+    hdr[0].text = "Clause Reference"
+    hdr[1].text = "Related Risk"
+    hdr[2].text = "Mitigation Recommendation Guideline"
+    
+    for row in mitigation_results:
+        cells = table.add_row().cells
+        cells[0].text = str(row.get("clause", ""))
+        cells[1].text = str(row.get("risk", ""))
+        cells[2].text = str(row.get("mitigation", ""))
+        
+    doc.save(output_path)
     return output_path
