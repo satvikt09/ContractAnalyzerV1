@@ -679,7 +679,7 @@ def evaluate_group_with_ollama(
         len(prompt)
     )
     response = chat(
-        model="qwen3:8b",
+        model="gemma4:31b-cloud",
         messages=[
             {
                 "role": "user",
@@ -712,6 +712,12 @@ def evaluate_group_with_ollama(
 def check_compliance(
     classified_clauses
 ):
+    try:
+        from agents.contract_analyzer.services.historical_indexing import initialize_index
+        initialize_index()
+    except Exception as e:
+        print(f"Error initializing historical index: {e}")
+
     overall_start = time.time()
     print("\n" + "=" * 60)
     print("RULE COMPLIANCE ENGINE")
@@ -977,25 +983,70 @@ def check_compliance(
             else 0
         )
 
-        if SHOW_HISTORICAL_ACTION_COLUMN:
-            clause_name = result.get("clause", "")
-            action_map = {
-                "Payment Terms": "Negotiated milestone-based payment schedule and removed conditional payment dependencies.",
-                "Bank Guarantees": "Reduced performance security from 12% to 10% through contract amendment.",
-                "Liquidated Damages": "Negotiated lower LD cap and clarified applicability conditions.",
-                "Guarantee": "Renegotiated warranty duration and coverage limits during legal review.",
-                "Force Majeure": "Expanded force majeure coverage and simplified notice requirements.",
-                "Termination": "Revised cancellation fee structure during commercial negotiations.",
-                "Suspension": "Added suspension approval workflow and duration limits.",
-                "Change Orders": "Implemented formal change request and approval process.",
-                "Governing Law": "Standardized governing law language across contracts.",
-                "Dispute Resolution": "Updated arbitration mechanism based on prior legal review.",
-                "Insurance": "Expanded insurance coverage obligations.",
-                "Liability": "Reduced liability exposure through revised cap language.",
-                "Consequential Damages": "Clarified exclusions and carve-outs after legal review.",
-                "Critical Sub-Suppliers": "Approved alternate vendors and defined substitution controls."
-            }
-            result["historical_action"] = action_map.get(clause_name, "Revised contract language during review.")
+    # Process Historical Actions Taken Column dynamically in batches with caching and retry constraints
+    if SHOW_HISTORICAL_ACTION_COLUMN:
+        from agents.contract_analyzer.services.similarity_retrieval import retrieve_historical_records
+        from agents.contract_analyzer.services.historical_summary_generator import (
+            get_cache_key, SUMMARY_CACHE, batch_generate_historical_summaries, NO_HISTORICAL_CASES_FOUND_STRING
+        )
+        
+        print(f"\nPROCESSING HISTORICAL ACTIONS FOR {len(final_results)} COMPLIANCE ROWS...")
+        hist_start = time.time()
+        
+        to_summarize = []
+        for idx, res in enumerate(final_results):
+            c_name = res.get("clause", "")
+            req_text = res.get("requirement", "")
+            status = res.get("status", "")
+            
+            # Check module-level in-memory cache first
+            cache_key = get_cache_key(c_name, req_text)
+            if cache_key in SUMMARY_CACHE:
+                res["historical_action"] = SUMMARY_CACHE[cache_key]
+                continue
+                
+            # Perform similarity lookup
+            records = retrieve_historical_records(c_name, req_text)
+            if not records:
+                res["historical_action"] = NO_HISTORICAL_CASES_FOUND_STRING
+                SUMMARY_CACHE[cache_key] = res["historical_action"]
+            else:
+                to_summarize.append({
+                    "id": idx,
+                    "clause": c_name,
+                    "requirement": req_text,
+                    "status": status,
+                    "records": records
+                })
+                
+        # Group into batches of size 8
+        batch_size = 8
+        batches = [to_summarize[i : i + batch_size] for i in range(0, len(to_summarize), batch_size)]
+        
+        if batches:
+            print(f"Generating historical actions for {len(to_summarize)} rows in {len(batches)} batches (max 2 concurrent LLM calls)...")
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                futures = {executor.submit(batch_generate_historical_summaries, b): b for b in batches}
+                for future in as_completed(futures):
+                    try:
+                        batch_res = future.result()
+                        for row_idx, summary_text in batch_res.items():
+                            final_results[row_idx]["historical_action"] = summary_text
+                    except Exception as e:
+                        print(f"Batch generation failed: {e}")
+                        # Fallback for the batch
+                        batch = futures[future]
+                        for item in batch:
+                            row_idx = item["id"]
+                            records = item["records"]
+                            if records and len(records) > 0:
+                                from agents.contract_analyzer.services.historical_summary_generator import format_historical_action_with_references
+                                fallback_action = records[0].get("historical_action") or "Revised contract language during review."
+                                final_results[row_idx]["historical_action"] = format_historical_action_with_references(fallback_action, [records[0]])
+                            else:
+                                final_results[row_idx]["historical_action"] = NO_HISTORICAL_CASES_FOUND_STRING
+                                
+        print(f"Historical Actions retrieval and batch generation took {round(time.time() - hist_start, 2)} seconds.")
     print("\n" + "=" * 60)
     print("FINAL RESULTS")
     print("=" * 60)

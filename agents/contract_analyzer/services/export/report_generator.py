@@ -97,6 +97,7 @@ def export_contract_report(
         cols += 1
 
     cols += 1  # Evidence
+    cols += 1  # Assessor Remarks
 
     if SHOW_HISTORICAL_ACTION_COLUMN:
         cols += 1
@@ -137,6 +138,9 @@ def export_contract_report(
     hdr[idx].text = (
         "Evidence"
     )
+    idx += 1
+
+    hdr[idx].text = "Assessor Remarks"
     idx += 1
 
     if SHOW_HISTORICAL_ACTION_COLUMN:
@@ -189,6 +193,14 @@ def export_contract_report(
         cells[idx].text = str(
             row.get(
                 "evidence",
+                ""
+            )
+        )
+        idx += 1
+
+        cells[idx].text = str(
+            row.get(
+                "remarks",
                 ""
             )
         )

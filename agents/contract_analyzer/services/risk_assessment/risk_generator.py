@@ -6,7 +6,7 @@ from .risk_prompt import RISK_PROMPT
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
 
-MODEL_NAME = "gemma3:4b"
+MODEL_NAME = "gemma4:31b-cloud"
 
 
 def generate_risk_entry(result):

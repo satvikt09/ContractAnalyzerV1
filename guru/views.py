@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+# pyrefly: ignore [missing-import]
 from django.shortcuts import redirect, render
+# pyrefly: ignore [missing-import]
 from django.http import FileResponse
+# pyrefly: ignore [missing-import]
 from django.utils import timezone
+# pyrefly: ignore [missing-import]
 from django.views.decorators.csrf import csrf_protect
 
 from agents.contract_analyzer import chat_agent as sample_agent
@@ -330,6 +334,7 @@ def download_report(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
+# pyrefly: ignore [missing-import]
 from django.http import JsonResponse
 
 def download_table_docx(request):

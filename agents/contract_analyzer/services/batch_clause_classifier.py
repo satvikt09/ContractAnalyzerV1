@@ -1,7 +1,9 @@
 import os
 import json
 
+# pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
+# pyrefly: ignore [missing-import]
 import google.generativeai as genai
 
 load_dotenv()
@@ -12,7 +14,7 @@ genai.configure(
 
 
 MODEL = genai.GenerativeModel(
-    "gemini-2.5-flash"
+    "gemma4:31b-cloud"
 )
 
 

@@ -261,11 +261,12 @@ export default function App() {
           width: 100%;
         }
         .intro-banner {
-          background: linear-gradient(135deg, #810055 0%, #4a0033 100%);
-          color: #ffffff;
+          background: #FFFFFF;
+          border: 1px solid #E5E7EB;
+          color: #111827;
           padding: 40px;
           border-radius: 20px;
-          box-shadow: 0 4px 20px rgba(129, 0, 85, 0.12);
+          box-shadow: 0 1px 3px rgba(16, 24, 40, .05);
           display: flex;
           flex-direction: column;
           gap: 12px;
@@ -274,15 +275,14 @@ export default function App() {
           margin: 0;
           font-size: 32px;
           font-weight: 700;
-          color: #ffffff;
+          color: #111827;
           letter-spacing: -0.02em;
         }
         .intro-banner p {
           margin: 0;
-          color: #f3e8ff;
+          color: #4B5563;
           font-size: 16px !important;
           line-height: 1.6;
-          opacity: 0.95;
           max-width: 800px;
         }
         .card {
@@ -688,12 +688,108 @@ export default function App() {
           padding: 16px;
           font-size: .95rem;
         }
+
+        /* Tooltip styles */
+        .has-tooltip {
+          position: relative;
+        }
+        .has-tooltip::after {
+          content: attr(data-tooltip);
+          position: absolute;
+          top: 125%;
+          left: 50%;
+          transform: translateX(-50%) scale(0.95);
+          transform-origin: top center;
+          background-color: #810055;
+          color: #ffffff;
+          padding: 6px 12px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          white-space: nowrap;
+          opacity: 0;
+          pointer-events: none;
+          transition: all 0.15s ease-in-out;
+          box-shadow: 0 4px 12px rgba(129, 0, 85, 0.25);
+          z-index: 1000;
+        }
+        .has-tooltip::before {
+          content: '';
+          position: absolute;
+          top: 115%;
+          left: 50%;
+          transform: translateX(-50%) scale(0.95);
+          transform-origin: top center;
+          border-width: 5px;
+          border-style: solid;
+          border-color: transparent transparent #810055 transparent;
+          opacity: 0;
+          pointer-events: none;
+          transition: all 0.15s ease-in-out;
+          z-index: 1000;
+        }
+        .has-tooltip:hover::after {
+          opacity: 1;
+          transform: translateX(-50%) scale(1);
+        }
+        .has-tooltip:hover::before {
+          opacity: 1;
+          transform: translateX(-50%) scale(1);
+        }
+
+        /* Tooltips on the right aligned to avoid overflow */
+        .has-tooltip-left {
+          position: relative;
+        }
+        .has-tooltip-left::after {
+          content: attr(data-tooltip);
+          position: absolute;
+          top: 125%;
+          right: 0;
+          transform: scale(0.95);
+          transform-origin: right top;
+          background-color: #810055;
+          color: #ffffff;
+          padding: 6px 12px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          white-space: nowrap;
+          opacity: 0;
+          pointer-events: none;
+          transition: all 0.15s ease-in-out;
+          box-shadow: 0 4px 12px rgba(129, 0, 85, 0.25);
+          z-index: 1000;
+        }
+        .has-tooltip-left::before {
+          content: '';
+          position: absolute;
+          top: 115%;
+          right: 15px;
+          transform: scale(0.95);
+          transform-origin: right top;
+          border-width: 5px;
+          border-style: solid;
+          border-color: transparent transparent #810055 transparent;
+          opacity: 0;
+          pointer-events: none;
+          transition: all 0.15s ease-in-out;
+          z-index: 1000;
+        }
+        .has-tooltip-left:hover::after {
+          opacity: 1;
+          transform: scale(1);
+        }
+        .has-tooltip-left:hover::before {
+          opacity: 1;
+          transform: scale(1);
+        }
       `}</style>
 
       <div className="dashboard-container">
         {/* Intro Banner */}
         <div className="intro-banner">
-          <h1>{config?.heroTitle || "📄 AI-Powered Contract Review Platform"}</h1>
+          <h1>{config?.heroTitle || "📄 Contract Analyser"}</h1>
           <p>
             {config?.heroSubtitle ||
               "Upload and review agreements instantly. Our Generative AI engine extracts critical clauses, highlights compliance statuses, maps project risks, and details mitigation guidelines."}
@@ -829,7 +925,8 @@ export default function App() {
               {reportPath && (
                 <a
                   href="/api/download-report/"
-                  className="download-report-btn"
+                  className="download-report-btn has-tooltip-left"
+                  data-tooltip="Download full Contract Analysis Report as DOCX"
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -916,7 +1013,8 @@ export default function App() {
                   <div style={{ display: "flex", gap: "8px" }}>
                     <button
                       type="button"
-                      className="download-table-btn"
+                      className="download-table-btn has-tooltip"
+                      data-tooltip="Export Compliance Check Table as CSV"
                       onClick={downloadComplianceCSV}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -928,7 +1026,8 @@ export default function App() {
                     </button>
                     <a
                       href={`/api/download-table-docx/?type=compliance&session_key=${sessionKey}`}
-                      className="download-table-btn"
+                      className="download-table-btn has-tooltip-left"
+                      data-tooltip="Export Compliance Check Table as DOCX"
                       target="_blank"
                       rel="noreferrer"
                     >
@@ -1003,7 +1102,8 @@ export default function App() {
                   <div style={{ display: "flex", gap: "8px" }}>
                     <button
                       type="button"
-                      className="download-table-btn"
+                      className="download-table-btn has-tooltip"
+                      data-tooltip="Export Risk Assessment Table as CSV"
                       onClick={downloadRiskCSV}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1015,7 +1115,8 @@ export default function App() {
                     </button>
                     <a
                       href={`/api/download-table-docx/?type=risk&session_key=${sessionKey}`}
-                      className="download-table-btn"
+                      className="download-table-btn has-tooltip-left"
+                      data-tooltip="Export Risk Assessment Table as DOCX"
                       target="_blank"
                       rel="noreferrer"
                     >
@@ -1084,7 +1185,8 @@ export default function App() {
                   <div style={{ display: "flex", gap: "8px" }}>
                     <button
                       type="button"
-                      className="download-table-btn"
+                      className="download-table-btn has-tooltip"
+                      data-tooltip="Export Mitigation Strategy Table as CSV"
                       onClick={downloadMitigationCSV}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1096,7 +1198,8 @@ export default function App() {
                     </button>
                     <a
                       href={`/api/download-table-docx/?type=mitigation&session_key=${sessionKey}`}
-                      className="download-table-btn"
+                      className="download-table-btn has-tooltip-left"
+                      data-tooltip="Export Mitigation Strategy Table as DOCX"
                       target="_blank"
                       rel="noreferrer"
                     >

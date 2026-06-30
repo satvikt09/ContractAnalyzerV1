@@ -6,7 +6,7 @@ from .mitigation_prompt import (
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
 
-MODEL_NAME = "qwen3:8b"
+MODEL_NAME = "gemma4:31b-cloud"
 
 
 def generate_mitigation(risk_row):

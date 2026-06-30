@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 
 type Props = {
   children: React.ReactNode;
@@ -9,17 +9,73 @@ type Props = {
 
 export default function MainLayout({
   children,
-  navLeftLabel = "Enterprise Contract Analyzer",
+  navLeftLabel = "Contract Analysis Agent",
   username = "User",
-  currentTime = new Date().toLocaleDateString("en-US", {
-    weekday: "short",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  }),
 }: Props) {
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [liveDateTime, setLiveDateTime] = useState("");
+
+  useEffect(() => {
+    const updateDateTime = () => {
+      const now = new Date();
+      const dateStr = now.toLocaleDateString("en-US", {
+        weekday: "short",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+      const timeStr = now.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+      setLiveDateTime(`${dateStr} ${timeStr}`);
+    };
+
+    updateDateTime();
+    const interval = setInterval(updateDateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className="rail-shell">
+    <div className={`rail-shell ${isSidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+      <style>{`
+        .rail-shell {
+          display: grid !important;
+          grid-template-columns: 280px 1fr;
+          transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .rail-shell.sidebar-collapsed {
+          grid-template-columns: 0px 1fr !important;
+        }
+        .rail-shell .side-bar {
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          overflow: hidden;
+          white-space: nowrap;
+        }
+        .rail-shell.sidebar-collapsed .side-bar {
+          width: 0 !important;
+          max-width: 0 !important;
+          min-width: 0 !important;
+          opacity: 0 !important;
+          border-right: none !important;
+          padding: 0 !important;
+        }
+        .sidebar-toggle-btn:hover {
+          color: #810055 !important;
+          background-color: #f3f4f6 !important;
+        }
+        .header-datetime {
+          margin-left: 16px;
+          color: #6B7280;
+          font-size: 14px;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+        }
+      `}</style>
+
       <aside className="side-bar">
         <div className="sidebar">
           <div className="sidebar-header">
@@ -43,7 +99,7 @@ export default function MainLayout({
             <details className="workspace-expander" open>
               <summary>PED</summary>
               <a className="bottom-item" href="#">PED Knowledge Assistant</a>
-              <a className="bottom-item active" href="#" aria-current="page">Contractual Analyzer</a>
+              <a className="bottom-item active" href="#" aria-current="page">Contract Analyser</a>
               <a className="bottom-item" href="#">Engineering Spec Summary Chat</a>
               <a className="bottom-item" href="#">Workspace Console</a>
             </details>
@@ -87,10 +143,66 @@ export default function MainLayout({
       <div className="center-panel">
         <div className="header">
           <div className="header-left">
+            <button
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              className="sidebar-toggle-btn"
+              aria-label="Toggle Sidebar"
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: "8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: "8px",
+                transition: "all 0.2s ease",
+                color: "#4B5563"
+              }}
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                {isHovered ? (
+                  isSidebarCollapsed ? (
+                    // Right arrow to expand
+                    <>
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                      <polyline points="12 5 19 12 12 19" />
+                    </>
+                  ) : (
+                    // Left arrow to collapse
+                    <>
+                      <line x1="19" y1="12" x2="5" y2="12" />
+                      <polyline points="12 19 5 12 12 5" />
+                    </>
+                  )
+                ) : (
+                  // Hamburger
+                  <>
+                    <line x1="4" y1="6" x2="20" y2="6" />
+                    <line x1="4" y1="12" x2="20" y2="12" />
+                    <line x1="4" y1="18" x2="20" y2="18" />
+                  </>
+                )}
+              </svg>
+            </button>
             <div className="app-logo">
               <img src="/logo.svg" alt="App Logo" />
             </div>
             <div className="header-context">{navLeftLabel}</div>
+            <div className="header-datetime">
+              {liveDateTime}
+            </div>
           </div>
         </div>
 

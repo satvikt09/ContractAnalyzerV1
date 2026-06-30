@@ -14,7 +14,7 @@ genai.configure(
 )
 
 model = genai.GenerativeModel(
-    "gemini-2.5-flash"
+    "gemma4:31b-cloud"
 )
 
 
