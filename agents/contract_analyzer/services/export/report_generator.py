@@ -8,6 +8,33 @@ from agents.contract_analyzer.services.config import (
     SHOW_HISTORICAL_ACTION_COLUMN
 )
 
+def _sort_compliance_results(results):
+    try:
+        from agents.contract_analyzer.services.checklist_requirements_benchmark import (
+            CHECKLIST_REQUIREMENTS
+        )
+    except ImportError:
+        return results
+    
+    order_map = {}
+    for idx, item in enumerate(CHECKLIST_REQUIREMENTS):
+        key = (item["clause"].strip().lower(), item["requirement"].strip().lower())
+        if key not in order_map:
+            order_map[key] = idx
+
+    def get_order_key(res):
+        clause = res.get("clause", "").strip().lower()
+        req = res.get("requirement", "").strip().lower()
+        key = (clause, req)
+        if key in order_map:
+            return order_map[key]
+        for checklist_key, checklist_idx in order_map.items():
+            if checklist_key[0] == clause and checklist_key[1] == req:
+                return checklist_idx
+        return 999999
+
+    return sorted(results, key=get_order_key)
+
 
 def export_contract_report(
     executive_summary,
@@ -16,7 +43,7 @@ def export_contract_report(
     mitigation_results,
     output_path
 ):
-
+    compliance_results = _sort_compliance_results(compliance_results)
     doc = Document()
 
     doc.add_heading(
@@ -343,6 +370,7 @@ def export_contract_report(
 
 
 def export_individual_compliance_report(compliance_results, output_path):
+    compliance_results = _sort_compliance_results(compliance_results)
     doc = Document()
     doc.add_heading("Compliance Evaluation Report", level=1)
     

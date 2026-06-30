@@ -377,3 +377,81 @@ def download_table_docx(request):
         filename=output_filename,
         content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
+
+def download_report_pdf(request):
+    session_key = request.GET.get("session_key")
+    if not session_key:
+        session_key = request.session.session_key
+        if not session_key:
+            request.session.create()
+            session_key = request.session.session_key
+            
+    from agents.contract_analyzer import chat_agent as sample_agent
+    state = sample_agent._ensure_session(session_key)
+    
+    from agents.contract_analyzer.services.export.pdf_generator import export_contract_pdf
+    
+    buffer = io.BytesIO()
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    try:
+        export_contract_pdf(
+            executive_summary=state.executive_summary,
+            compliance_results=state.compliance_results,
+            risk_results=state.risk_analysis,
+            mitigation_results=state.mitigation_analysis,
+            output_path_or_buffer=buffer
+        )
+        buffer.seek(0)
+        return FileResponse(
+            buffer,
+            as_attachment=True,
+            filename=f"Contract_Analysis_Report_{timestamp}.pdf",
+            content_type="application/pdf"
+        )
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+def download_table_pdf(request):
+    session_key = request.GET.get("session_key")
+    if not session_key:
+        session_key = request.session.session_key
+        if not session_key:
+            request.session.create()
+            session_key = request.session.session_key
+    table_type = request.GET.get("type", "")
+    
+    from agents.contract_analyzer import chat_agent as sample_agent
+    state = sample_agent._ensure_session(session_key)
+    
+    from agents.contract_analyzer.services.export.pdf_generator import (
+        export_individual_compliance_pdf,
+        export_individual_risk_pdf,
+        export_individual_mitigation_pdf
+    )
+    
+    buffer = io.BytesIO()
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    try:
+        if table_type == "compliance":
+            output_filename = f"Compliance_Evaluation_Report_{timestamp}.pdf"
+            export_individual_compliance_pdf(state.compliance_results, buffer)
+        elif table_type == "risk":
+            output_filename = f"Risk_Assessment_Report_{timestamp}.pdf"
+            export_individual_risk_pdf(state.risk_analysis, buffer)
+        elif table_type == "mitigation":
+            output_filename = f"Mitigation_Strategy_Guidelines_{timestamp}.pdf"
+            export_individual_mitigation_pdf(state.mitigation_analysis, buffer)
+        else:
+            return JsonResponse({"error": "Invalid table type"}, status=400)
+            
+        buffer.seek(0)
+        return FileResponse(
+            buffer,
+            as_attachment=True,
+            filename=output_filename,
+            content_type="application/pdf"
+        )
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)

@@ -923,20 +923,36 @@ export default function App() {
             <div className="results-header-actions">
               <h2 className="results-title">Analysis Dashboard</h2>
               {reportPath && (
-                <a
-                  href="/api/download-report/"
-                  className="download-report-btn has-tooltip-left"
-                  data-tooltip="Download full Contract Analysis Report as DOCX"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                  Download DOCX Report
-                </a>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <a
+                    href="/api/download-report/"
+                    className="download-report-btn has-tooltip-left"
+                    data-tooltip="Download full Contract Analysis Report as DOCX"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Download DOCX Report
+                  </a>
+                  <a
+                    href={`/api/download-report-pdf/?session_key=${sessionKey}`}
+                    className="download-report-btn has-tooltip-left"
+                    data-tooltip="Download full Contract Analysis Report as PDF"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Download PDF Report
+                  </a>
+                </div>
               )}
             </div>
 
@@ -1026,7 +1042,7 @@ export default function App() {
                     </button>
                     <a
                       href={`/api/download-table-docx/?type=compliance&session_key=${sessionKey}`}
-                      className="download-table-btn has-tooltip-left"
+                      className="download-table-btn has-tooltip"
                       data-tooltip="Export Compliance Check Table as DOCX"
                       target="_blank"
                       rel="noreferrer"
@@ -1037,6 +1053,20 @@ export default function App() {
                         <line x1="12" y1="15" x2="12" y2="3" />
                       </svg>
                       Export DOCX
+                    </a>
+                    <a
+                      href={`/api/download-table-pdf/?type=compliance&session_key=${sessionKey}`}
+                      className="download-table-btn has-tooltip-left"
+                      data-tooltip="Export Compliance Check Table as PDF"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      Export PDF
                     </a>
                   </div>
                 </div>
@@ -1115,7 +1145,7 @@ export default function App() {
                     </button>
                     <a
                       href={`/api/download-table-docx/?type=risk&session_key=${sessionKey}`}
-                      className="download-table-btn has-tooltip-left"
+                      className="download-table-btn has-tooltip"
                       data-tooltip="Export Risk Assessment Table as DOCX"
                       target="_blank"
                       rel="noreferrer"
@@ -1126,6 +1156,20 @@ export default function App() {
                         <line x1="12" y1="15" x2="12" y2="3" />
                       </svg>
                       Export DOCX
+                    </a>
+                    <a
+                      href={`/api/download-table-pdf/?type=risk&session_key=${sessionKey}`}
+                      className="download-table-btn has-tooltip-left"
+                      data-tooltip="Export Risk Assessment Table as PDF"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      Export PDF
                     </a>
                   </div>
                 </div>
@@ -1198,7 +1242,7 @@ export default function App() {
                     </button>
                     <a
                       href={`/api/download-table-docx/?type=mitigation&session_key=${sessionKey}`}
-                      className="download-table-btn has-tooltip-left"
+                      className="download-table-btn has-tooltip"
                       data-tooltip="Export Mitigation Strategy Table as DOCX"
                       target="_blank"
                       rel="noreferrer"
@@ -1209,6 +1253,20 @@ export default function App() {
                         <line x1="12" y1="15" x2="12" y2="3" />
                       </svg>
                       Export DOCX
+                    </a>
+                    <a
+                      href={`/api/download-table-pdf/?type=mitigation&session_key=${sessionKey}`}
+                      className="download-table-btn has-tooltip-left"
+                      data-tooltip="Export Mitigation Strategy Table as PDF"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      Export PDF
                     </a>
                   </div>
                 </div>

@@ -926,29 +926,34 @@ def check_compliance(
     }     
     if SHOW_CLAUSE_SUMMARY_COLUMN:
         for result in final_results:
-            clause_type = (
-                CLAUSE_TO_TYPE.get(
-                    result["clause"],
-                    ""
-                )
-            )
-            clause_text = " ".join(
-                clause_map.get(
-                    clause_type,
-                    []
-                )
-            )
-            result["clause_summary"] = (
-                generate_clause_summary(
-                    clause_text
-                )
-            ) 
+            req_name = result.get("requirement", "")
+            evidence = result.get("evidence", "").strip()
+            status = result.get("status", "")
+            
+            if not evidence:
+                if status == "Not Met":
+                    summary_text = f"Requirement not met: No supporting provisions or evidence found in the contract for '{req_name}'."
+                else:
+                    summary_text = f"Requirement '{req_name}' evaluated with status '{status}' (no specific evidence text recorded)."
+            else:
+                sentences = [
+                    s.strip()
+                    for s in evidence.replace("\n", " ").replace("\t", " ").split(".")
+                    if len(s.strip()) > 10
+                ]
+                if sentences:
+                    joined = ". ".join(sentences[:3])
+                    if not joined.endswith("."):
+                        joined += "."
+                    summary_text = f"Provisions regarding '{req_name}': {joined}"
+                else:
+                    summary_text = f"Provisions regarding '{req_name}': {evidence}"
+                    
+            result["clause_summary"] = summary_text
             print(
                 result["clause"],
-                "summary length:",
-                len(
-                    result["clause_summary"]
-                )
+                "requirement summary length:",
+                len(result["clause_summary"])
             )           
     # --------------------------------
     # RISK SIGNAL ENRICHMENT
@@ -1047,8 +1052,36 @@ def check_compliance(
                                 final_results[row_idx]["historical_action"] = NO_HISTORICAL_CASES_FOUND_STRING
                                 
         print(f"Historical Actions retrieval and batch generation took {round(time.time() - hist_start, 2)} seconds.")
+
+    # --------------------------------
+    # RESTORE ORIGINAL CHECKLIST ORDER
+    # --------------------------------
+    order_map = {}
+    for idx, item in enumerate(CHECKLIST_REQUIREMENTS):
+        key = (item["clause"].strip().lower(), item["requirement"].strip().lower())
+        if key not in order_map:
+            order_map[key] = idx
+
+    def get_order_key(res):
+        clause = res.get("clause", "").strip().lower()
+        req = res.get("requirement", "").strip().lower()
+        
+        # Exact match
+        key = (clause, req)
+        if key in order_map:
+            return order_map[key]
+            
+        # Fallback comparison just in case there are minor differences
+        for checklist_key, checklist_idx in order_map.items():
+            if checklist_key[0] == clause and checklist_key[1] == req:
+                return checklist_idx
+                
+        return 999999
+
+    final_results.sort(key=get_order_key)
+
     print("\n" + "=" * 60)
-    print("FINAL RESULTS")
+    print("FINAL RESULTS (SORTED)")
     print("=" * 60)
     print(
         f"Count: "
