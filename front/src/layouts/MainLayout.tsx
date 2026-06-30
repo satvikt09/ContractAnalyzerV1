@@ -52,7 +52,9 @@ export default function MainLayout({
         .rail-shell .side-bar {
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           overflow: hidden;
+          overflow-x: hidden !important;
           white-space: nowrap;
+          box-sizing: border-box !important;
         }
         .rail-shell.sidebar-collapsed .side-bar {
           width: 0 !important;

@@ -146,7 +146,7 @@ body.rail-collapsed .rail-shell .sidebar {
 .sidebar {
   height: 100vh;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: hidden !important;
   display: flex;
   flex-direction: column;
   background-color: #f1f1ed;
@@ -154,6 +154,7 @@ body.rail-collapsed .rail-shell .sidebar {
   transition: all 0.3s ease;
   font-size: 0.90rem;
   width: 100%;
+  box-sizing: border-box !important;
 }
 
 .sidebar::-webkit-scrollbar {
@@ -1010,14 +1011,18 @@ body:not(.has-rail) .main-content {
   align-items: stretch;
   height: 100%;
   overflow: hidden;
+  overflow-x: hidden !important;
   padding: 12px 15px 18px;
+  box-sizing: border-box !important;
 }
 
 .rail-shell .sidebar-content {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden !important;
   padding: 0 15px 18px;
+  box-sizing: border-box !important;
 }
 
 .rail-shell .sidebar-content::-webkit-scrollbar {

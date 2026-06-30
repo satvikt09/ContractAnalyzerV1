@@ -1,8 +1,10 @@
 import json
 import os
 
+# pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 
+# pyrefly: ignore [missing-import]
 import google.generativeai as genai
 
 load_dotenv()
