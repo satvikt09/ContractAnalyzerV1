@@ -1,33 +1,23 @@
 import os
 import json
-
-# pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
-# pyrefly: ignore [missing-import]
 import google.generativeai as genai
 
 load_dotenv()
 
-genai.configure(
-    api_key=os.getenv("GEMINI_API_KEY")
-)
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+MODEL = genai.GenerativeModel("gemma4:31b-cloud")
 
 
-MODEL = genai.GenerativeModel(
-    "gemma4:31b-cloud"
-)
-
-
-def classify_clauses_batch(sections):
-
+def classify_clauses_batch(sections: list) -> list:
+    """Classify a batch of text sections into legal clause types using Gemini."""
     if not sections:
         return []
 
-    prompt = """
-You are a legal contract clause classifier.
+    prompt = """You are a legal contract clause classifier.
 
 Possible clause types:
-
 - parties
 - scope_of_services
 - payment
@@ -48,7 +38,6 @@ Possible clause types:
 Return ONLY valid JSON.
 
 Format:
-
 [
   {
     "title": "...",
@@ -60,44 +49,21 @@ Format:
 
 Clauses:
 """
-
     for i, section in enumerate(sections, start=1):
-
         prompt += f"""
-
 Clause {i}
-
 TITLE:
 {section["title"]}
-
 CONTENT:
 {section["content"][:3000]}
 """
 
-    response = MODEL.generate_content(
-        prompt
-    )
-
+    response = MODEL.generate_content(prompt)
     try:
-
         text = response.text.strip()
-
         if text.startswith("```json"):
-            text = text.replace(
-                "```json",
-                ""
-            ).replace(
-                "```",
-                ""
-            )
-
+            text = text.replace("```json", "").replace("```", "")
         return json.loads(text)
-
     except Exception as e:
-
-        print(
-            "Batch classification failed:",
-            str(e)
-        )
-
+        print("Batch classification failed:", str(e))
         return []

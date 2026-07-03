@@ -1,83 +1,37 @@
 import re
 
-
 INVALID_HEADINGS = {
-    "NAME",
-    "FIRM",
-    "FUNCTION",
-    "PROJECT MANAGER",
-    "PROJECT ENGINEER",
-    "DATE",
-    "PAGE",
-    "SIGNATURE",
-    "TITLE",
-    "ADDRESS",
-    "PHONE",
-    "EMAIL",
+    "NAME", "FIRM", "FUNCTION", "PROJECT MANAGER", "PROJECT ENGINEER",
+    "DATE", "PAGE", "SIGNATURE", "TITLE", "ADDRESS", "PHONE", "EMAIL",
 }
 
 
-def is_document_title(title):
-
+def is_document_title(title: str) -> bool:
+    """Check if the title represents a general document title rather than a specific clause."""
     title = title.strip()
-
     if not title:
         return False
-
     words = title.split()
-
     return (
         len(words) <= 8
         and "AGREEMENT" in title.upper()
-        and not re.match(
-            r'^\d+\.',
-            title
-        )
+        and not re.match(r'^\d+\.', title)
     )
 
 
-def get_heading_type(line):
-
+def get_heading_type(line: str) -> str | None:
+    """Identify if a line is a top-level heading (TOP) or a sub-heading (SUB)."""
     line = line.strip()
-
-    if not line:
+    if not line or line.upper() in INVALID_HEADINGS:
         return None
 
-    if line.upper() in INVALID_HEADINGS:
-        return None
-
-    # -------------------------
-    # TOP LEVEL HEADINGS
-    # -------------------------
-
-    # 1. PAYMENT TERMS
-
-    if re.match(
-        r'^\d+\.\s+[A-Z]',
-        line
-    ):
+    # Top level headings: '1. PAYMENT TERMS', 'ARTICLE IV', 'SECTION 7', ALL CAPS
+    if re.match(r'^\d+\.\s+[A-Z]', line):
         return "TOP"
-
-    # ARTICLE IV
-
-    if re.match(
-        r'^ARTICLE\s+[IVXLC\d]+',
-        line,
-        re.IGNORECASE
-    ):
+    if re.match(r'^ARTICLE\s+[IVXLC\d]+', line, re.IGNORECASE):
         return "TOP"
-
-    # SECTION 7
-
-    if re.match(
-        r'^SECTION\s+\d+',
-        line,
-        re.IGNORECASE
-    ):
+    if re.match(r'^SECTION\s+\d+', line, re.IGNORECASE):
         return "TOP"
-
-    # ALL CAPS HEADINGS
-
     if (
         line.isupper()
         and 1 <= len(line.split()) <= 10
@@ -87,254 +41,108 @@ def get_heading_type(line):
     ):
         return "TOP"
 
-    # -------------------------
-    # SUBSECTIONS
-    # -------------------------
-
-    if re.match(
-        r'^\d+\.\d+\s+',
-        line
-    ):
-        return "SUB"
-
-    if re.match(
-        r'^[A-Z]\.\s+',
-        line
-    ):
+    # Subsections: '1.1 ', 'A. '
+    if re.match(r'^\d+\.\d+\s+', line) or re.match(r'^[A-Z]\.\s+', line):
         return "SUB"
 
     return None
 
 
-def clean_content(lines):
-
+def clean_content(lines: list[str]) -> str:
+    """Clean extra page markers, signature stamps, and join content lines."""
     cleaned = []
-
     for line in lines:
-
         line = line.strip()
-
         if not line:
             continue
-
-        # Page number removal
-
-        if re.match(
-            r'^Page\s+\d+$',
-            line,
-            re.IGNORECASE
-        ):
+        if re.match(r'^Page\s+\d+$', line, re.IGNORECASE):
             continue
-
-        # Signature cleanup
-
         if (
             "SIGNATORY:" in line.upper()
             or "EMAIL OF SIGNATORY" in line.upper()
             or "TIMESTAMP:" in line.upper()
         ):
             continue
-
         cleaned.append(line)
-
     return "\n".join(cleaned)
 
 
-def merge_multiline_headings(lines):
-
+def merge_multiline_headings(lines: list[str]) -> list[str]:
+    """Merge lines where heading labels are split from heading text."""
     merged = []
-
     i = 0
-
     while i < len(lines):
-
         current = lines[i].strip()
-
-        # Example:
-        #
-        # 4.
-        # EARLY TERMINATION
-
-        if (
-            re.match(r'^\d+\.$', current)
-            and i + 1 < len(lines)
-        ):
-
+        # Handle case like '4.' followed by 'EARLY TERMINATION' on next line
+        if re.match(r'^\d+\.$', current) and i + 1 < len(lines):
             next_line = lines[i + 1].strip()
-
-            if (
-                next_line
-                and next_line.isupper()
-            ):
-
-                merged.append(
-                    f"{current} {next_line}"
-                )
-
+            if next_line and next_line.isupper():
+                merged.append(f"{current} {next_line}")
                 i += 2
                 continue
-
         merged.append(current)
-
         i += 1
-
     return merged
 
 
-def segment_contract(text):
-
+def segment_contract(text: str) -> list[dict]:
+    """Segment raw contract text into structured sections by parsing headings."""
     lines = text.splitlines()
-
-    lines = merge_multiline_headings(
-        lines
-    )
+    lines = merge_multiline_headings(lines)
 
     sections = []
-
     current_title = None
-
     current_content = []
-
     first_top_heading = True
 
     for line in lines:
-
         stripped = line.strip()
-
         if not stripped:
             continue
 
-        heading_type = get_heading_type(
-            stripped
-        )
-
-        # -------------------------
-        # NEW TOP LEVEL SECTION
-        # -------------------------
+        heading_type = get_heading_type(stripped)
 
         if heading_type == "TOP":
-
             if current_title:
+                sections.append({
+                    "title": current_title,
+                    "content": clean_content(current_content)
+                })
 
-                sections.append(
-                    {
-                        "title": current_title,
-                        "content": clean_content(
-                            current_content
-                        )
-                    }
-                )
-
-            # -------------------------
-            # DOCUMENT TITLE DETECTION
-            # Example:
-            #
-            # SERVICE AGREEMENT
-            # VENDOR AGREEMENT
-            # MASTER SERVICE AGREEMENT
-            #
-            # Skip it because it's not a clause
-            # -------------------------
-
-            if (
-                first_top_heading
-                and is_document_title(
-                    stripped
-                )
-            ):
-
-                print(
-                    f"[SEGMENTER] Skipping document title: {stripped}"
-                )
-
+            if first_top_heading and is_document_title(stripped):
+                print(f"[SEGMENTER] Skipping document title: {stripped}")
                 first_top_heading = False
-
                 current_title = None
-
                 current_content = []
-
                 continue
 
             first_top_heading = False
-
             current_title = stripped
-
             current_content = []
-
             continue
-
-        # -------------------------
-        # SUBSECTION
-        # Keep inside parent clause
-        # -------------------------
 
         if heading_type == "SUB":
-
-            current_content.append(
-                f"\n{stripped}"
-            )
-
+            current_content.append(f"\n{stripped}")
             continue
 
-        # -------------------------
-        # NORMAL CONTENT
-        # -------------------------
+        current_content.append(stripped)
 
-        current_content.append(
-            stripped
-        )
-
-    # Final section
-
+    # Add final section
     if current_title:
+        sections.append({
+            "title": current_title,
+            "content": clean_content(current_content)
+        })
 
-        sections.append(
-            {
-                "title": current_title,
-                "content": clean_content(
-                    current_content
-                )
-            }
-        )
-
-    # -------------------------
-    # FILTER EMPTY SECTIONS
-    # -------------------------
-
-    filtered = []
-
-    for section in sections:
-
-        if not section["content"].strip():
-            continue
-
-        filtered.append(section)
-
-    # -------------------------
-    # DEBUG
-    # -------------------------
+    # Filter out empty sections
+    filtered = [s for s in sections if s["content"].strip()]
 
     print("\n========== SEGMENTER OUTPUT ==========")
-
     for section in filtered:
-
-        print(
-            f"TITLE: {section['title']}"
-        )
-
+        print(f"TITLE: {section['title']}")
     print("=====================================\n")
 
-    # -------------------------
-    # FALLBACK
-    # -------------------------
-
     if not filtered:
-
-        return [
-            {
-                "title": "FULL_DOCUMENT",
-                "content": text
-            }
-        ]
+        return [{"title": "FULL_DOCUMENT", "content": text}]
 
     return filtered

@@ -1,30 +1,23 @@
 import json
+import re
 import requests
 
 from .risk_prompt import RISK_PROMPT
 
-
 OLLAMA_URL = "http://localhost:11434/api/generate"
-
 MODEL_NAME = "gemma4:31b-cloud"
 
 
-def generate_risk_entry(result):
-
+def generate_risk_entry(result: dict) -> dict:
+    """Generate risk description, rationale, and mitigation using Ollama."""
     prompt = RISK_PROMPT.format(
         clause=result["clause"],
         requirement=result["requirement"],
         status=result["status"],
         evidence=result["evidence"],
         remarks=result["remarks"],
-        clause_content=result.get(
-            "clause_content",
-            ""
-        ),
-        location=result.get(
-            "location",
-            ""
-        )
+        clause_content=result.get("clause_content", ""),
+        location=result.get("location", "")
     )
 
     response = requests.post(
@@ -37,17 +30,11 @@ def generate_risk_entry(result):
         timeout=120
     )
 
-    import re
-
     text = response.json()["response"]
-
     print("\nRAW GEMMA RESPONSE:")
     print(text)
 
-    # --------------------------------
-    # CLEAN RESPONSE
-    # --------------------------------
-
+    # Clean response text
     text = (
         text
         .replace("```json", "")
@@ -57,23 +44,12 @@ def generate_risk_entry(result):
         .strip()
     )
 
-    # --------------------------------
-    # EXTRACT JSON OBJECT
-    # --------------------------------
-
-    match = re.search(
-        r"\{.*\}",
-        text,
-        re.DOTALL
-    )
-
+    # Extract JSON substring
+    match = re.search(r"\{.*\}", text, re.DOTALL)
     if match:
         text = match.group()
 
-    # --------------------------------
-    # PARSE JSON
-    # --------------------------------
-
+    # Parse clean JSON
     try:
         text = (
             text
@@ -81,45 +57,21 @@ def generate_risk_entry(result):
             .replace("”", '"')
             .replace("’", "'")
             .replace("‘", "'")
-        )        
-
+        )
         parsed = json.loads(text)
-
         return {
-            "risk":
-                parsed.get(
-                    "risk",
-                    "Unknown Risk"
-                ),
-
-            "rationale":
-                parsed.get(
-                    "rationale",
-                    ""
-                ),
-
-            "mitigation":
-                parsed.get(
-                    "mitigation",
-                    ""
-                )
+            "risk": parsed.get("risk", "Unknown Risk"),
+            "rationale": parsed.get("rationale", ""),
+            "mitigation": parsed.get("mitigation", "")
         }
-
     except Exception as e:
-
         print("\nJSON ERROR:")
         print(e)
-
         print("\nFAILED JSON:")
         print(text)
 
         return {
-            "risk":
-                "Manual Review Required",
-
-            "rationale":
-                text[:1000],
-
-            "mitigation":
-                "Manual review required"
+            "risk": "Manual Review Required",
+            "rationale": text[:1000],
+            "mitigation": "Manual review required"
         }

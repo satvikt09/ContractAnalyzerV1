@@ -1,70 +1,38 @@
 RISK_SIGNALS = [
-
     # exceptions
-    "except",
-    "excluding",
-    "exclude",
-    "unless",
-    "however",
-    "notwithstanding",
+    "except", "excluding", "exclude", "unless", "however", "notwithstanding",
 
     # conditional language
-    "subject to",
-    "provided that",
-    "conditional",
-    "approval",
-    "approval required",
-    "prior approval",
+    "subject to", "provided that", "conditional", "approval", "approval required", "prior approval",
 
     # scope limitations
-    "limited to",
-    "only",
-    "restricted to",
+    "limited to", "only", "restricted to",
 
     # legal narrowing
-    "deemed",
-    "at buyer discretion",
-    "sole discretion",
-    "may suspend",
-    "may terminate",
-    "may defer",
+    "deemed", "at buyer discretion", "sole discretion", "may suspend", "may terminate", "may defer",
 
     # commercial offsets
-    "less",
-    "minus",
-    "deduct",
-    "offset",
-    "credit",
+    "less", "minus", "deduct", "offset", "credit",
 
     # liability carveouts
-    "carve-out",
-    "carve out",
+    "carve-out", "carve out",
 
     # exclusions
-    "does not apply",
-    "shall not apply",
-    "not applicable",
+    "does not apply", "shall not apply", "not applicable",
 
     # partial coverage
-    "undelivered balance",
-    "remaining balance",
+    "undelivered balance", "remaining balance",
 
     # recovery reduction
-    "salvage",
-    "scrap value",
-    "resale value"
+    "salvage", "scrap value", "resale value"
 ]
 
 
-def contains_risk_signal(text):
-
+def contains_risk_signal(text: str) -> list[str]:
+    """Scan text to identify and return matching risk signals/keywords."""
     text = text.lower()
-
     matches = []
-
     for signal in RISK_SIGNALS:
-
         if signal in text:
             matches.append(signal)
-
     return matches
