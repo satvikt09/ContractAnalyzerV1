@@ -370,7 +370,6 @@ def evaluate_requirement_with_ollama(
     """
 
 
-    start_time = time.time()
     print("CALLING OLLAMA...")
     response = chat(
         model="qwen3:8b",
@@ -386,10 +385,7 @@ def evaluate_requirement_with_ollama(
     )
     print("OLLAMA RETURNED")
 
-    print(
-        f"Ollama Time: "
-        f"{round(time.time() - start_time, 2)} sec"
-    )
+
 
     text = (
         response["message"]["content"]
@@ -673,7 +669,6 @@ def evaluate_group_with_ollama(
       }}
     ]
     """
-    start = time.time()
     print(
         f"{clause_name} prompt size:",
         len(prompt)
@@ -691,10 +686,7 @@ def evaluate_group_with_ollama(
         }
     )
 
-    print(
-        f"{clause_name} took "
-        f"{round(time.time()-start,2)} sec"
-    )
+
     text = (
         response["message"]["content"]
         .replace("```json", "")
@@ -718,12 +710,9 @@ def check_compliance(
     except Exception as e:
         print(f"Error initializing historical index: {e}")
 
-    overall_start = time.time()
     print("\n" + "=" * 60)
     print("RULE COMPLIANCE ENGINE")
     print("=" * 60)
-
-    rule_start = time.time()
 
     rule_output = (
         evaluate_compliance_rules(
@@ -732,10 +721,7 @@ def check_compliance(
         )
     )
 
-    rule_time = round(
-        time.time() - rule_start,
-        2
-    )
+
 
     rule_results = (
         rule_output["rule_results"]
@@ -779,7 +765,6 @@ def check_compliance(
         return rule_results
 
     llm_results = []
-    ollama_start = time.time()
     print("\nSAMPLE CLAUSE OBJECT\n")
 
     print(
@@ -863,10 +848,7 @@ def check_compliance(
                             "confidence": 0.0
                         }
                     )
-    ollama_time = round(
-        time.time() - ollama_start,
-        2
-    )
+
     print("\n" + "=" * 60)
     print("LLM RESULTS")
     print("=" * 60)
@@ -988,21 +970,20 @@ def check_compliance(
             else 0
         )
 
-    # Process Historical Actions Taken Column dynamically in batches with caching and retry constraints
+    # Process Historical Actions Taken Column dynamically grouped by main clause with caching and retry constraints
     if SHOW_HISTORICAL_ACTION_COLUMN:
         from agents.contract_analyzer.services.similarity_retrieval import retrieve_historical_records
         from agents.contract_analyzer.services.historical_summary_generator import (
-            get_cache_key, SUMMARY_CACHE, batch_generate_historical_summaries, NO_HISTORICAL_CASES_FOUND_STRING
+            get_cache_key, SUMMARY_CACHE, generate_clause_historical_actions, NO_HISTORICAL_CASES_FOUND_STRING
         )
         
         print(f"\nPROCESSING HISTORICAL ACTIONS FOR {len(final_results)} COMPLIANCE ROWS...")
-        hist_start = time.time()
         
-        to_summarize = []
+        # 1. Group the unresolved compliance rows by their main clause name
+        grouped_by_clause = {}
         for idx, res in enumerate(final_results):
             c_name = res.get("clause", "")
             req_text = res.get("requirement", "")
-            status = res.get("status", "")
             
             # Check module-level in-memory cache first
             cache_key = get_cache_key(c_name, req_text)
@@ -1010,48 +991,62 @@ def check_compliance(
                 res["historical_action"] = SUMMARY_CACHE[cache_key]
                 continue
                 
-            # Perform similarity lookup
-            records = retrieve_historical_records(c_name, req_text)
-            if not records:
-                res["historical_action"] = NO_HISTORICAL_CASES_FOUND_STRING
-                SUMMARY_CACHE[cache_key] = res["historical_action"]
-            else:
-                to_summarize.append({
-                    "id": idx,
-                    "clause": c_name,
-                    "requirement": req_text,
-                    "status": status,
-                    "records": records
-                })
-                
-        # Group into batches of size 8
-        batch_size = 8
-        batches = [to_summarize[i : i + batch_size] for i in range(0, len(to_summarize), batch_size)]
-        
-        if batches:
-            print(f"Generating historical actions for {len(to_summarize)} rows in {len(batches)} batches (max 2 concurrent LLM calls)...")
+            if c_name not in grouped_by_clause:
+                grouped_by_clause[c_name] = []
+            grouped_by_clause[c_name].append({
+                "id": idx,
+                "requirement": req_text,
+                "status": res.get("status", ""),
+                "evidence": res.get("evidence", ""),
+                "remarks": res.get("remarks", "")
+            })
+            
+        # 2. For each clause, retrieve relevant historical documents once and process in a single LLM call
+        if grouped_by_clause:
+            print(f"Generating historical actions for {len(grouped_by_clause)} clauses...")
+            
+            def process_clause_group(clause_name, sub_reqs):
+                # Retrieve unique historical records for this clause by querying for each sub-requirement and deduplicating
+                clause_records = []
+                seen_records = set()
+                for req in sub_reqs:
+                    records = retrieve_historical_records(clause_name, req["requirement"])
+                    for rec in records:
+                        rec_key = (rec.get("file_source", ""), rec.get("requirement", ""), rec.get("clause", ""))
+                        if rec_key not in seen_records:
+                            seen_records.add(rec_key)
+                            clause_records.append(rec)
+                            
+                if not clause_records:
+                    # Set all sub-requirements to the default NO_HISTORICAL_CASES_FOUND_STRING
+                    results_map = {}
+                    for req in sub_reqs:
+                        item_id = req["id"]
+                        results_map[item_id] = NO_HISTORICAL_CASES_FOUND_STRING
+                        key = get_cache_key(clause_name, req["requirement"])
+                        SUMMARY_CACHE[key] = NO_HISTORICAL_CASES_FOUND_STRING
+                    return results_map
+                    
+                # Call the optimized LLM batch function
+                return generate_clause_historical_actions(clause_name, sub_reqs, clause_records)
+
             with ThreadPoolExecutor(max_workers=2) as executor:
-                futures = {executor.submit(batch_generate_historical_summaries, b): b for b in batches}
+                futures = {executor.submit(process_clause_group, name, reqs): name for name, reqs in grouped_by_clause.items()}
                 for future in as_completed(futures):
+                    clause_name = futures[future]
                     try:
-                        batch_res = future.result()
-                        for row_idx, summary_text in batch_res.items():
+                        clause_results = future.result()
+                        for row_idx, summary_text in clause_results.items():
                             final_results[row_idx]["historical_action"] = summary_text
                     except Exception as e:
-                        print(f"Batch generation failed: {e}")
-                        # Fallback for the batch
-                        batch = futures[future]
-                        for item in batch:
-                            row_idx = item["id"]
-                            records = item["records"]
-                            if records and len(records) > 0:
-                                from agents.contract_analyzer.services.historical_summary_generator import format_historical_action_with_references
-                                fallback_action = records[0].get("historical_action") or "Revised contract language during review."
-                                final_results[row_idx]["historical_action"] = format_historical_action_with_references(fallback_action, [records[0]])
-                            else:
+                        print(f"Failed historical actions for clause {clause_name}: {e}")
+                        # Fallback for all items under this clause
+                        for req in grouped_by_clause[clause_name]:
+                            row_idx = req["id"]
+                            if "historical_action" not in final_results[row_idx]:
                                 final_results[row_idx]["historical_action"] = NO_HISTORICAL_CASES_FOUND_STRING
                                 
-        print(f"Historical Actions retrieval and batch generation took {round(time.time() - hist_start, 2)} seconds.")
+
 
     # --------------------------------
     # RESTORE ORIGINAL CHECKLIST ORDER
@@ -1088,20 +1083,7 @@ def check_compliance(
         f"{len(final_results)}"
     )
 
-    total_time = round(
-        time.time() - overall_start,
-        2
-    )
 
-    print("\n" + "=" * 60)
-    print("TIMING SUMMARY")
-    print("=" * 60)
-
-    print(f"Rule Engine : {rule_time} sec")
-    print(f"Ollama Total: {ollama_time} sec")
-    print(f"Total Run   : {total_time} sec")
-
-    print("=" * 60)
 
     print("\nSAMPLE RESULT")
     print(final_results[0])

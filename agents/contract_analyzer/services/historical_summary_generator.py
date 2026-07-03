@@ -7,7 +7,6 @@ from ollama import chat
 
 logger = logging.getLogger(__name__)
 
-# Persistent in-memory cache for generated summaries
 SUMMARY_CACHE = {}
 
 NO_HISTORICAL_CASES_FOUND_STRING = (
@@ -207,6 +206,7 @@ def batch_generate_historical_summaries(batch_items):
                     "role": "user",
                     "content": prompt
                 }
+
             ],
             options={
                 "temperature": 0.1
@@ -248,6 +248,152 @@ def batch_generate_historical_summaries(batch_items):
     for item in batch_items:
         item_id = item["id"]
         key = get_cache_key(item["clause"], item["requirement"])
+        SUMMARY_CACHE[key] = results_map[item_id]
+
+    return results_map
+
+
+def generate_clause_historical_actions(clause_name, sub_requirements, historical_records):
+    """
+    Generates unique historical actions for all sub-requirements under a main clause using a single LLM call.
+    """
+    if not sub_requirements:
+        return {}
+
+    # Format historical records
+    formatted_docs = []
+    for idx, rec in enumerate(historical_records):
+        sec_sub = rec.get("section_subclause") or "N/A"
+        formatted_docs.append(
+            f"  Document {idx+1}:\n"
+            f"    - Source Filename: {rec['file_source']}\n"
+            f"    - Matching Clause: {rec['clause']}\n"
+            f"    - Matching Requirement: {rec['requirement']}\n"
+            f"    - Matching Section/Sub-clause: {sec_sub}\n"
+            f"    - Status: {rec['status']}\n"
+            f"    - Evidence: {rec['evidence']}\n"
+            f"    - Remarks: {rec['remarks']}\n"
+            f"    - Action Taken: {rec['historical_action']}\n"
+            f"    - Resolution: {rec.get('resolution') or 'N/A'}\n"
+        )
+
+    # Format sub-requirements
+    formatted_reqs = []
+    for req in sub_requirements:
+        formatted_reqs.append({
+            "id": req["id"],
+            "requirement": req["requirement"],
+            "status": req["status"],
+            "current_evidence": req.get("evidence") or "",
+            "current_remarks": req.get("remarks") or ""
+        })
+
+    docs_text = "\n".join(formatted_docs) if formatted_docs else "No historical records found for this clause."
+    sample_id = next(iter(sub_requirements))["id"] if sub_requirements else 0
+
+    prompt = f"""
+    You are a senior enterprise contract compliance consultant.
+    You are analyzing historical records to generate "Historical Action Taken" entries for a batch of sub-requirements under the main clause: "{clause_name}".
+    
+    Here are the retrieved historical documents relevant to "{clause_name}":
+    {docs_text}
+    
+    Here is the list of current sub-requirements to evaluate:
+    {json.dumps(formatted_reqs, indent=2)}
+    
+    INSTRUCTIONS:
+    1. For each sub-requirement, review the historical documents to find cases that match the sub-requirement's specific objective.
+    2. Generate a unique, concise "Historical Action Taken" summary (exactly 1 to 2 sentences) describing what was typically done, negotiated, or revised in the past specifically for this sub-requirement.
+    3. Do not reuse or duplicate the exact same summary or text across sibling requirements. Each sub-requirement must have its own custom summary reflecting its specific requirement text.
+    4. If no similar historical case exists for a specific sub-requirement, output a safe generic default or state that no historical records were found.
+    5. For each sub-requirement, identify up to 3 most relevant source references from the historical documents. Do not duplicate references.
+    6. For each source reference, include:
+       - file_source: the exact matching file_source from the document.
+       - clause: the exact matching clause from the document.
+       - requirement: the exact matching requirement from the document.
+       - section_subclause: section/sub-clause of the document.
+       - quote: a short quote (exactly 1 sentence only) from the document's evidence, remarks, or action taken that directly supports the historical action summary.
+       
+    CRITICAL SCHEMA RULE:
+    You MUST return ONLY a valid JSON object matching the following schema. Do not write any markdown code blocks (such as ```json), comments, or intro/outro texts.
+    
+    {{
+      "results": [
+        {{
+          "id": {sample_id},
+          "historical_action": "Concise 1-2 sentence summary of what was negotiated historically for this specific requirement...",
+          "sources": [
+            {{
+              "file_source": "Contract_Analysis_Report_07.docx",
+              "clause": "Payment Terms",
+              "requirement": "45% Minimum Advance",
+              "section_subclause": "Clause 4.1",
+              "quote": "The advance payment requirement was accepted as 45% upon initial delivery of spec sheets."
+            }}
+          ]
+        }}
+      ]
+    }}
+    """
+
+    results_map = {}
+    try:
+        response = chat_with_backoff(
+            model="gemma4:31b-cloud",
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            options={
+                "temperature": 0.1
+            }
+        )
+        
+        content_text = response["message"]["content"].strip()
+        
+        # Strip markdown code blocks if the model wrapped the JSON
+        start_obj = content_text.find("{")
+        end_obj = content_text.rfind("}") + 1
+        if start_obj != -1 and end_obj > start_obj:
+            content_text = content_text[start_obj:end_obj]
+            
+        parsed_response = json.loads(content_text)
+        for entry in parsed_response.get("results", []):
+            item_id = entry.get("id")
+            action_text = entry.get("historical_action", "").strip()
+            sources = entry.get("sources", [])
+            if item_id is not None and action_text:
+                results_map[item_id] = format_historical_action_with_references(action_text, sources)
+
+    except Exception as e:
+        logger.error(f"Error processing clause-level batched summaries for {clause_name}: {e}")
+
+    # Fallback populating
+    for req in sub_requirements:
+        item_id = req["id"]
+        if item_id not in results_map:
+            # Try to match the closest record for this specific requirement using the input historical records
+            matched_rec = None
+            if historical_records:
+                from agents.contract_analyzer.services.similarity_retrieval import compute_similarity
+                best_score = -1
+                for rec in historical_records:
+                    score = compute_similarity(clause_name, req["requirement"], rec["clause"], rec["requirement"])
+                    if score > best_score:
+                        best_score = score
+                        matched_rec = rec
+            if matched_rec:
+                summary_text = matched_rec.get("historical_action") or "Revised contract language during review."
+                results_map[item_id] = format_historical_action_with_references(summary_text, [matched_rec])
+            else:
+                results_map[item_id] = NO_HISTORICAL_CASES_FOUND_STRING
+
+    # Cache results
+    for req in sub_requirements:
+        item_id = req["id"]
+        key = get_cache_key(clause_name, req["requirement"])
         SUMMARY_CACHE[key] = results_map[item_id]
 
     return results_map

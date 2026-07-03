@@ -311,6 +311,7 @@ body.rail-collapsed .rail-shell .sidebar {
   color: #707070;
   transition: color 0.2s;
   margin-left: 15px;
+  white-space: normal;
 }
 
 .bottom-item:hover {

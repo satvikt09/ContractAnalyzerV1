@@ -63,7 +63,7 @@ def generate_risk_table(
     compliance_results
 ):
 
-    start_time = time.time()
+
 
     risk_table = []
 
@@ -239,10 +239,7 @@ def generate_risk_table(
         f"Gemma Calls: {len(risky_results)}"
     )
 
-    print(
-        f"Time: "
-        f"{round(time.time() - start_time, 2)} sec"
-    )
+
 
     print("=" * 60)
 

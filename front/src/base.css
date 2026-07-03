@@ -18,7 +18,7 @@ a{text-decoration:none;color:inherit;}
 .logo-sub{font-size:.9rem;color:var(--muted);}
 .sidebar-content{margin-top:14px;}
 .bottom-header{font-weight:700;margin:12px 0 6px;padding-left:12px;color:#374151;text-transform:uppercase;font-size:1.05rem;letter-spacing:.08em;}
-.bottom-item{display:block;padding:8px 12px 8px 22px;margin:2px 0;text-decoration:none;color:#1f2937;border-radius:8px;font-weight:500;transition:color .2s ease,font-weight .2s ease;}
+.bottom-item{display:block;padding:8px 12px 8px 22px;margin:2px 0;text-decoration:none;color:#1f2937;border-radius:8px;font-weight:500;transition:color .2s ease,font-weight .2s ease;white-space:normal;}
 .bottom-item:hover{background:#f1f1ed;}
 .bottom-item.active{color:#810055 !important;font-weight:700;background:#f1f1ed;}
 .bottom-note{color:#6B7280 !important;font-size:.85rem;margin:6px 0 12px;}
